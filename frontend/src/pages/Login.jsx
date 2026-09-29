@@ -27,8 +27,14 @@ function Login() {
       <div className="login-container">
 
         <div className="login-header">
-          <h1>NITT</h1>
+          <img
+            className="login-institution-logo"
+            src="/nitt-logo.jpg"
+            alt="NIT Tiruchirappalli crest"
+          />
+          <h1>NIT Trichy</h1>
           <h2>Event Management System</h2>
+          <p>Department of Computer Applications</p>
           <p>Welcome back! Please login to continue.</p>
         </div>
 

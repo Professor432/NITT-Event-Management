@@ -1,24 +1,102 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/TopNavbar";
 
+import { createEvent } from "../../api/eventApi";
+import { getVenues } from "../../api/venueApi";
+import { getDepartments } from "../../api/departmentApi";
+
+
 function AddEvent() {
 
+  const navigate = useNavigate();
+
+
   const [formData, setFormData] = useState({
+
     title: "",
     description: "",
+
     startDate: "",
     endDate: "",
+
     startTime: "",
     endTime: "",
+
     venue: "",
-    capacity: ""
+    department: "",
+
+    category: "Technical",
+
+    status: "upcoming"
+
   });
 
 
+  const [venues, setVenues] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+
+
+  // --------------------------------
+  // Load departments and venues
+  // --------------------------------
+
+  useEffect(() => {
+
+    const loadFormData = async () => {
+
+      try {
+
+        const [
+          venuesData,
+          departmentsData
+        ] = await Promise.all([
+
+          getVenues(),
+          getDepartments()
+
+        ]);
+
+        setVenues(venuesData);
+        setDepartments(departmentsData);
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          "Failed to load departments and venues."
+        );
+
+      } finally {
+
+        setLoadingData(false);
+
+      }
+
+    };
+
+    loadFormData();
+
+  }, []);
+
+
+  // --------------------------------
+  // Input change
+  // --------------------------------
+
   const handleChange = (e) => {
 
-    const { name, value } = e.target;
+    const {
+      name,
+      value
+    } = e.target;
 
     setFormData({
       ...formData,
@@ -28,17 +106,141 @@ function AddEvent() {
   };
 
 
-  const handleSubmit = (e) => {
+  // --------------------------------
+  // Submit
+  // --------------------------------
+
+  const handleSubmit = async (e) => {
 
     e.preventDefault();
 
-    console.log("New event:", formData);
+    try {
 
-    alert(
-      "Event created successfully! Database connection will be added later."
-    );
+      setLoading(true);
+
+
+      // Combine date + time
+      const startDateTime =
+        `${formData.startDate}T${formData.startTime}:00`;
+
+      const endDateTime =
+        `${formData.endDate}T${formData.endTime}:00`;
+
+
+      const eventData = {
+
+        title: formData.title,
+
+        description:
+          formData.description,
+
+        category:
+          formData.category,
+
+        startDate:
+          startDateTime,
+
+        endDate:
+          endDateTime,
+
+        department:
+          formData.department,
+
+        venue:
+          formData.venue,
+
+        status:
+          formData.status
+
+      };
+
+
+      console.log(
+        "Sending event:",
+        eventData
+      );
+
+
+      const newEvent =
+        await createEvent(eventData);
+
+
+      console.log(
+        "Created event:",
+        newEvent
+      );
+
+
+      alert(
+        "Event created successfully!"
+      );
+
+
+      // Go back to Manage Events
+      navigate("/admin/events");
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        error.message ||
+        "Failed to create event."
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
 
   };
+
+
+  // --------------------------------
+  // Back
+  // --------------------------------
+
+  const handleBack = () => {
+    navigate("/admin/events");
+  };
+
+
+  // --------------------------------
+  // Loading
+  // --------------------------------
+
+  if (loadingData) {
+
+    return (
+
+      <div className="dashboard-layout">
+
+        <Sidebar userType="admin" />
+
+        <main className="main-content">
+
+          <TopNavbar
+            userName="Admin"
+            role="Administrator"
+          />
+
+          <div className="dashboard-content">
+
+            <h2>
+              Loading form...
+            </h2>
+
+          </div>
+
+        </main>
+
+      </div>
+
+    );
+
+  }
 
 
   return (
@@ -54,9 +256,14 @@ function AddEvent() {
           role="Administrator"
         />
 
+
         <div className="dashboard-content">
 
-          <button className="back-button">
+
+          <button
+            className="back-button"
+            onClick={handleBack}
+          >
             ← Back to Events
           </button>
 
@@ -78,6 +285,7 @@ function AddEvent() {
             className="event-form"
             onSubmit={handleSubmit}
           >
+
 
             {/* EVENT NAME */}
 
@@ -115,6 +323,87 @@ function AddEvent() {
                 onChange={handleChange}
                 required
               />
+
+            </div>
+
+
+            {/* CATEGORY */}
+
+            <div className="form-field">
+
+              <label>
+                Category
+              </label>
+
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              >
+
+                <option value="Technical">
+                  Technical
+                </option>
+
+                <option value="Cultural">
+                  Cultural
+                </option>
+
+                <option value="Academic">
+                  Academic
+                </option>
+
+                <option value="Workshop">
+                  Workshop
+                </option>
+
+                <option value="Seminar">
+                  Seminar
+                </option>
+
+                <option value="Other">
+                  Other
+                </option>
+
+              </select>
+
+            </div>
+
+
+            {/* DEPARTMENT */}
+
+            <div className="form-field">
+
+              <label>
+                Department
+              </label>
+
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                required
+              >
+
+                <option value="">
+                  Select Department
+                </option>
+
+                {departments.map(
+                  (department) => (
+
+                    <option
+                      key={department._id}
+                      value={department._id}
+                    >
+                      {department.name}
+                    </option>
+
+                  )
+                )}
+
+              </select>
 
             </div>
 
@@ -199,45 +488,40 @@ function AddEvent() {
             </div>
 
 
-            {/* VENUE + CAPACITY */}
+            {/* VENUE */}
 
-            <div className="form-row">
+            <div className="form-field full-width">
 
-              <div className="form-field">
+              <label>
+                Venue
+              </label>
 
-                <label>
-                  Venue
-                </label>
+              <select
+                name="venue"
+                value={formData.venue}
+                onChange={handleChange}
+                required
+              >
 
-                <input
-                  type="text"
-                  name="venue"
-                  placeholder="e.g. Seminar Hall"
-                  value={formData.venue}
-                  onChange={handleChange}
-                  required
-                />
+                <option value="">
+                  Select Venue
+                </option>
 
-              </div>
+                {venues.map(
+                  (venue) => (
 
+                    <option
+                      key={venue._id}
+                      value={venue._id}
+                    >
+                      {venue.name} — Capacity:{" "}
+                      {venue.capacity}
+                    </option>
 
-              <div className="form-field">
+                  )
+                )}
 
-                <label>
-                  Maximum Participants
-                </label>
-
-                <input
-                  type="number"
-                  name="capacity"
-                  placeholder="e.g. 100"
-                  min="1"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  required
-                />
-
-              </div>
+              </select>
 
             </div>
 
@@ -249,18 +533,27 @@ function AddEvent() {
               <button
                 type="button"
                 className="cancel-button"
+                onClick={handleBack}
               >
                 Cancel
               </button>
 
+
               <button
                 type="submit"
                 className="submit-button"
+                disabled={loading}
               >
-                Create Event
+
+                {loading
+                  ? "Creating..."
+                  : "Create Event"
+                }
+
               </button>
 
             </div>
+
 
           </form>
 
@@ -269,7 +562,9 @@ function AddEvent() {
       </main>
 
     </div>
+
   );
+
 }
 
 export default AddEvent;

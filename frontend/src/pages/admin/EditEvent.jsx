@@ -1,70 +1,229 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/TopNavbar";
 
-import events from "../../data/events";
+import { getEventById, updateEvent } from "../../api/eventApi";
 
 
 function EditEvent() {
 
   const { id } = useParams();
-
-  const event = events.find(
-    (event) => event.id === Number(id)
-  );
-
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-
-    title: event?.title || "",
-    description: event?.description || "",
-    startDate: event?.startDate || "",
-    endDate: event?.endDate || "",
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
     startTime: "",
     endTime: "",
-    venue: event?.venue || "",
-    capacity: event?.capacity || ""
-
+    venue: "",
+    capacity: ""
   });
 
+  const [loading, setLoading] = useState(true);
+  const [venues, setVenues] = useState([]);
+
+  // ============================
+  // GET EVENT FROM DATABASE
+  // ============================
+
+  useEffect(() => {
+
+    const fetchData = async () => {
+
+      try {
+
+        // Get event
+        const event = await getEventById(id);
+
+        // Get venues
+        const venuesResponse = await fetch(
+          "http://localhost:5000/api/venues"
+        );
+
+        if (!venuesResponse.ok) {
+          throw new Error("Failed to fetch venues");
+        }
+
+        const venuesData = await venuesResponse.json();
+
+        setVenues(venuesData);
+
+
+        // Populate form
+        setFormData({
+
+          title: event.title || "",
+
+          description: event.description || "",
+
+          startDate: event.startDate
+            ? event.startDate.substring(0, 10)
+            : "",
+
+          endDate: event.endDate
+            ? event.endDate.substring(0, 10)
+            : "",
+
+          startTime: event.startDate
+            ? new Date(event.startDate)
+                .toISOString()
+                .substring(11, 16)
+            : "",
+
+          endTime: event.endDate
+            ? new Date(event.endDate)
+                .toISOString()
+                .substring(11, 16)
+            : "",
+
+          // If populate("venue") is used
+          venue:
+            typeof event.venue === "object"
+              ? event.venue._id
+              : event.venue || "",
+
+          capacity: event.capacity || ""
+
+        });
+
+      } catch (error) {
+
+        console.error("Error loading edit page:", error);
+
+        alert(error.message || "Failed to load event.");
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    fetchData();
+
+  }, [id]);
+
+
+  // ============================
+  // HANDLE FORM CHANGES
+  // ============================
 
   const handleChange = (e) => {
 
     const { name, value } = e.target;
 
-    setFormData({
-      ...formData,
+    setFormData((currentData) => ({
+      ...currentData,
       [name]: value
-    });
+    }));
 
   };
 
 
-  const handleSubmit = (e) => {
+  // ============================
+  // UPDATE EVENT
+  // ============================
+
+  const handleSubmit = async (e) => {
 
     e.preventDefault();
 
-    console.log("Updated event:", formData);
+    try {
 
-    alert(
-      "Event updated successfully! Database connection will be added later."
-    );
+      // Combine date + time
+      const startDateTime = new Date(
+        `${formData.startDate}T${formData.startTime || "00:00"}`
+      );
+
+      const endDateTime = new Date(
+        `${formData.endDate}T${formData.endTime || "00:00"}`
+      );
+
+
+      const updatedData = {
+
+        title: formData.title,
+
+        description: formData.description,
+
+        startDate: startDateTime.toISOString(),
+
+        endDate: endDateTime.toISOString(),
+
+        venue: formData.venue,
+
+        capacity: Number(formData.capacity)
+
+      };
+
+
+      console.log("Updating event:", updatedData);
+
+
+      await updateEvent(id, updatedData);
+
+
+      alert("Event updated successfully!");
+
+
+      // Go to Event Details page
+      navigate(`/admin/events/${id}`);
+
+    } catch (error) {
+
+      console.error("Update error:", error);
+
+      alert(
+        error.message || "Failed to update event."
+      );
+
+    }
 
   };
 
 
-  if (!event) {
+  // ============================
+  // LOADING
+  // ============================
+
+  if (loading) {
 
     return (
-      <div>
-        <h1>Event not found</h1>
+
+      <div className="dashboard-layout">
+
+        <Sidebar userType="admin" />
+
+        <main className="main-content">
+
+          <TopNavbar
+            userName="Admin"
+            role="Administrator"
+          />
+
+          <div className="dashboard-content">
+
+            <h1>Loading event...</h1>
+
+          </div>
+
+        </main>
+
       </div>
+
     );
 
   }
 
+
+  // ============================
+  // EDIT PAGE
+  // ============================
 
   return (
 
@@ -81,7 +240,13 @@ function EditEvent() {
 
         <div className="dashboard-content">
 
-          <button className="back-button">
+
+          {/* BACK BUTTON */}
+
+          <button
+            className="back-button"
+            onClick={() => navigate("/admin/events")}
+          >
             ← Back to Events
           </button>
 
@@ -104,6 +269,9 @@ function EditEvent() {
             onSubmit={handleSubmit}
           >
 
+
+            {/* EVENT NAME */}
+
             <div className="form-field">
 
               <label>
@@ -121,6 +289,8 @@ function EditEvent() {
             </div>
 
 
+            {/* DESCRIPTION */}
+
             <div className="form-field">
 
               <label>
@@ -137,6 +307,8 @@ function EditEvent() {
 
             </div>
 
+
+            {/* DATE */}
 
             <div className="form-row">
 
@@ -176,6 +348,8 @@ function EditEvent() {
             </div>
 
 
+            {/* TIME */}
+
             <div className="form-row">
 
               <div className="form-field">
@@ -212,6 +386,8 @@ function EditEvent() {
             </div>
 
 
+            {/* VENUE + CAPACITY */}
+
             <div className="form-row">
 
               <div className="form-field">
@@ -220,16 +396,31 @@ function EditEvent() {
                   Venue
                 </label>
 
-                <input
-                  type="text"
+                <select
                   name="venue"
                   value={formData.venue}
                   onChange={handleChange}
                   required
-                />
+                >
+
+                  <option value="">
+                    Select Venue
+                  </option>
+
+                  {venues.map((venue) => (
+
+                    <option
+                      key={venue._id}
+                      value={venue._id}
+                    >
+                      {venue.name}
+                    </option>
+
+                  ))}
+
+                </select>
 
               </div>
-
 
               <div className="form-field">
 
@@ -251,14 +442,18 @@ function EditEvent() {
             </div>
 
 
+            {/* BUTTONS */}
+
             <div className="form-actions">
 
               <button
                 type="button"
                 className="cancel-button"
+                onClick={() => navigate("/admin/events")}
               >
                 Cancel
               </button>
+
 
               <button
                 type="submit"
@@ -269,6 +464,7 @@ function EditEvent() {
 
             </div>
 
+
           </form>
 
         </div>
@@ -278,6 +474,8 @@ function EditEvent() {
     </div>
 
   );
+
 }
+
 
 export default EditEvent;

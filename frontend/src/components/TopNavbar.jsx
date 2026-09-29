@@ -1,9 +1,33 @@
-function TopNavbar({ userName = "John Doe", role = "User" }) {
+function TopNavbar({
+  userName = "John Doe",
+  role = "User",
+  isMenuOpen = false,
+  onMenuClick,
+}) {
   return (
     <header className="top-navbar">
 
       <div className="navbar-left">
-        <h3>Dashboard</h3>
+        <button
+          className="menu-toggle"
+          type="button"
+          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isMenuOpen}
+          aria-controls="primary-sidebar"
+          onClick={onMenuClick}
+        >
+          <span className="menu-toggle-bars" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+        <div>
+          <h3>Event Management</h3>
+          <p className="navbar-institution">
+            Department of Computer Applications | NIT Tiruchirappalli
+          </p>
+        </div>
       </div>
 
       <div className="navbar-right">

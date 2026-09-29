@@ -1,72 +1,334 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/TopNavbar";
 import StatCard from "../../components/StatCard";
 
+import { getEvents, deleteEvent } from "../../api/eventApi";
+
+
 function AdminDashboard() {
 
-  const events = [
-    {
-      id: 1,
-      icon: "🤖",
-      title: "AI & Machine Learning Workshop",
-      description:
-        "Hands-on workshop covering the fundamentals of AI and Machine Learning.",
-      date: "18 October 2026",
-      time: "10:00 AM - 1:00 PM",
-      venue: "Seminar Hall",
-      status: "Upcoming"
-    },
-    {
-      id: 2,
-      icon: "💻",
-      title: "Web Development Workshop",
-      description:
-        "Learn modern web development technologies and build a complete web application.",
-      date: "25 October 2026",
-      time: "9:30 AM - 12:30 PM",
-      venue: "Computer Lab 2",
-      status: "Upcoming"
-    },
-    {
-      id: 3,
-      icon: "📊",
-      title: "Data Science Symposium",
-      description:
-        "A symposium focusing on current developments in Data Science and Analytics.",
-      date: "2 November 2026",
-      time: "10:00 AM - 4:00 PM",
-      venue: "Main Auditorium",
-      status: "Upcoming"
+  const navigate = useNavigate();
+
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+  // ==========================================
+  // FETCH EVENTS FROM DATABASE
+  // ==========================================
+
+  useEffect(() => {
+
+    const fetchEvents = async () => {
+
+      try {
+
+        const data = await getEvents();
+
+        setEvents(data);
+
+      } catch (error) {
+
+        console.error("Error fetching events:", error);
+
+        alert("Failed to load events.");
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    fetchEvents();
+
+  }, []);
+
+
+  // ==========================================
+  // CALCULATE EVENT STATUS
+  // ==========================================
+
+  const getEventStatus = (event) => {
+
+    const now = new Date();
+
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
+
+
+    if (now < start) {
+
+      return "upcoming";
+
     }
-  ];
 
+    if (now >= start && now <= end) {
 
-  const handleEdit = (eventId) => {
-    console.log("Edit event:", eventId);
-    alert("Edit functionality will be added in the next step.");
+      return "ongoing";
+
+    }
+
+    return "completed";
+
   };
 
 
-  const handleDelete = (eventId) => {
-    console.log("Delete event:", eventId);
-    alert("Delete functionality will be added in the next step.");
+  // ==========================================
+  // CALCULATE STATISTICS
+  // ==========================================
+
+  const upcomingEvents = events.filter(
+    (event) => getEventStatus(event) === "upcoming"
+  );
+
+
+  const ongoingEvents = events.filter(
+    (event) => getEventStatus(event) === "ongoing"
+  );
+
+
+  const completedEvents = events.filter(
+    (event) => getEventStatus(event) === "completed"
+  );
+
+
+  // ==========================================
+  // EVENTS FOR DASHBOARD
+  //
+  // Ongoing events
+  // +
+  // Upcoming events within next 14 days
+  // ==========================================
+
+  const now = new Date();
+
+  const fourteenDaysFromNow = new Date(now);
+
+  fourteenDaysFromNow.setDate(
+    fourteenDaysFromNow.getDate() + 14
+  );
+
+
+  const dashboardEvents = events.filter((event) => {
+
+    const status = getEventStatus(event);
+
+    const startDate = new Date(event.startDate);
+
+
+    // Show ALL ongoing events
+    if (status === "ongoing") {
+
+      return true;
+
+    }
+
+
+    // Show upcoming events within next 14 days
+    if (
+      status === "upcoming" &&
+      startDate <= fourteenDaysFromNow
+    ) {
+
+      return true;
+
+    }
+
+
+    return false;
+
+  });
+
+
+  // Sort events by start date
+
+  dashboardEvents.sort(
+    (a, b) =>
+      new Date(a.startDate) -
+      new Date(b.startDate)
+  );
+
+
+  // ==========================================
+  // FORMAT DATE
+  // ==========================================
+
+  const formatDate = (date) => {
+
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }
+    );
+
   };
 
+
+  // ==========================================
+  // FORMAT TIME
+  // ==========================================
+
+  const formatTime = (startDate, endDate) => {
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+
+    const startTime = start.toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "numeric",
+        minute: "2-digit"
+      }
+    );
+
+
+    const endTime = end.toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "numeric",
+        minute: "2-digit"
+      }
+    );
+
+
+    return `${startTime} - ${endTime}`;
+
+  };
+
+
+  // ==========================================
+  // VIEW EVENT
+  // ==========================================
 
   const handleView = (eventId) => {
-    console.log("View event:", eventId);
-    alert("Event details will be added in the next step.");
+
+    navigate(`/admin/events/${eventId}`);
+
   };
 
+
+  // ==========================================
+  // EDIT EVENT
+  // ==========================================
+
+  const handleEdit = (eventId) => {
+
+    navigate(`/admin/events/edit/${eventId}`);
+
+  };
+
+
+  // ==========================================
+  // DELETE EVENT
+  // ==========================================
+
+  const handleDelete = async (eventId) => {
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event?"
+    );
+
+
+    if (!confirmed) {
+
+      return;
+
+    }
+
+
+    try {
+
+      await deleteEvent(eventId);
+
+
+      // Remove event from dashboard
+      setEvents((currentEvents) =>
+        currentEvents.filter(
+          (event) => event._id !== eventId
+        )
+      );
+
+
+      alert("Event deleted successfully!");
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        error.message ||
+        "Failed to delete event."
+      );
+
+    }
+
+  };
+
+
+  // ==========================================
+  // ADD EVENT
+  // ==========================================
 
   const handleAddEvent = () => {
-    alert("Add Event page will be added in the next step.");
+
+    navigate("/admin/events/add");
+
   };
 
+
+  // ==========================================
+  // LOADING
+  // ==========================================
+
+  if (loading) {
+
+    return (
+
+      <div className="dashboard-layout">
+
+        <Sidebar userType="admin" />
+
+        <main className="main-content">
+
+          <TopNavbar
+            userName="Admin"
+            role="Administrator"
+          />
+
+          <div className="dashboard-content">
+
+            <h1>
+              Loading dashboard...
+            </h1>
+
+          </div>
+
+        </main>
+
+      </div>
+
+    );
+
+  }
+
+
+  // ==========================================
+  // DASHBOARD
+  // ==========================================
 
   return (
 
     <div className="dashboard-layout">
+
 
       {/* SIDEBAR */}
 
@@ -77,6 +339,7 @@ function AdminDashboard() {
 
       <main className="main-content">
 
+
         {/* NAVBAR */}
 
         <TopNavbar
@@ -86,6 +349,7 @@ function AdminDashboard() {
 
 
         <div className="dashboard-content">
+
 
           {/* WELCOME */}
 
@@ -102,27 +366,31 @@ function AdminDashboard() {
           </section>
 
 
-          {/* STATISTICS */}
+          {/* =================================
+              STATISTICS
+          ================================= */}
 
           <section className="stats-grid">
 
             <StatCard
               title="Upcoming"
-              count="12"
+              count={upcomingEvents.length}
               icon="📅"
               description="Events coming soon"
             />
 
+
             <StatCard
               title="Ongoing"
-              count="2"
+              count={ongoingEvents.length}
               icon="🔴"
               description="Events happening now"
             />
 
+
             <StatCard
               title="Completed"
-              count="18"
+              count={completedEvents.length}
               icon="✅"
               description="Events completed"
             />
@@ -130,9 +398,12 @@ function AdminDashboard() {
           </section>
 
 
-          {/* MANAGE EVENTS */}
+          {/* =================================
+              EVENTS SECTION
+          ================================= */}
 
           <section className="dashboard-section">
+
 
             <div className="section-header">
 
@@ -143,7 +414,8 @@ function AdminDashboard() {
                 </h2>
 
                 <p>
-                  Create, update and manage department events.
+                  Ongoing events and upcoming events
+                  for the next 14 days.
                 </p>
 
               </div>
@@ -159,110 +431,186 @@ function AdminDashboard() {
             </div>
 
 
-            {/* EVENTS TABLE */}
+            {/* =================================
+                EVENTS
+            ================================= */}
 
             <div className="admin-events-container">
 
-              {events.map((event) => (
 
-                <div
-                  className="admin-event-card"
-                  key={event.id}
-                >
+              {dashboardEvents.length === 0 ? (
 
-                  {/* EVENT INFORMATION */}
+                <div className="no-events">
 
-                  <div className="admin-event-info">
+                  <h3>
+                    No events to show
+                  </h3>
 
-                    <div className="event-icon">
-                      {event.icon}
-                    </div>
-
-
-                    <div className="admin-event-details">
-
-                      <div className="admin-event-title">
-
-                        <h3>
-                          {event.title}
-                        </h3>
-
-                        <span className="event-status upcoming">
-                          {event.status}
-                        </span>
-
-                      </div>
-
-
-                      <p>
-                        {event.description}
-                      </p>
-
-
-                      <div className="event-details">
-
-                        <span>
-                          📅 {event.date}
-                        </span>
-
-                        <span>
-                          ⏰ {event.time}
-                        </span>
-
-                        <span>
-                          📍 {event.venue}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ACTION BUTTONS */}
-
-                  <div className="admin-event-actions">
-
-                    <button
-                      className="view-action"
-                      onClick={() => handleView(event.id)}
-                    >
-                      View
-                    </button>
-
-
-                    <button
-                      className="edit-action"
-                      onClick={() => handleEdit(event.id)}
-                    >
-                      Edit
-                    </button>
-
-
-                    <button
-                      className="delete-action"
-                      onClick={() => handleDelete(event.id)}
-                    >
-                      Delete
-                    </button>
-
-                  </div>
+                  <p>
+                    There are no ongoing events or
+                    upcoming events in the next 14 days.
+                  </p>
 
                 </div>
 
-              ))}
+              ) : (
+
+                dashboardEvents.map((event) => {
+
+                  const status =
+                    getEventStatus(event);
+
+
+                  return (
+
+                    <div
+                      className="admin-event-card"
+                      key={event._id}
+                    >
+
+
+                      {/* EVENT INFORMATION */}
+
+                      <div className="admin-event-info">
+
+
+                        <div className="event-icon">
+
+                          {status === "ongoing"
+                            ? "🔴"
+                            : "📅"}
+
+                        </div>
+
+
+                        <div className="admin-event-details">
+
+
+                          <div className="admin-event-title">
+
+
+                            <h3>
+                              {event.title}
+                            </h3>
+
+
+                            <span
+                              className={`event-status ${status}`}
+                            >
+                              {status}
+                            </span>
+
+
+                          </div>
+
+
+                          <p>
+                            {event.description}
+                          </p>
+
+
+                          <div className="event-details">
+
+
+                            <span>
+                              📅{" "}
+                              {formatDate(
+                                event.startDate
+                              )}
+                            </span>
+
+
+                            <span>
+                              ⏰{" "}
+                              {formatTime(
+                                event.startDate,
+                                event.endDate
+                              )}
+                            </span>
+
+
+                            <span>
+                              📍{" "}
+
+                              {event.venue?.name ||
+                                event.venue ||
+                                "Venue not specified"}
+
+                            </span>
+
+
+                          </div>
+
+
+                        </div>
+
+
+                      </div>
+
+
+                      {/* ACTION BUTTONS */}
+
+                      <div className="admin-event-actions">
+
+
+                        <button
+                          className="view-action"
+                          onClick={() =>
+                            handleView(event._id)
+                          }
+                        >
+                          View
+                        </button>
+
+
+                        <button
+                          className="edit-action"
+                          onClick={() =>
+                            handleEdit(event._id)
+                          }
+                        >
+                          Edit
+                        </button>
+
+
+                        <button
+                          className="delete-action"
+                          onClick={() =>
+                            handleDelete(event._id)
+                          }
+                        >
+                          Delete
+                        </button>
+
+
+                      </div>
+
+
+                    </div>
+
+                  );
+
+                })
+
+              )}
 
             </div>
 
+
           </section>
+
 
         </div>
 
+
       </main>
 
+
     </div>
+
   );
+
 }
+
 
 export default AdminDashboard;

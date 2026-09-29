@@ -1,114 +1,183 @@
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
-
-function Sidebar({ userType = "user" }) {
-
+function Sidebar({ userType = "user", isOpen = false, onNavigate }) {
   return (
-
-    <aside className="sidebar">
-
+    <aside
+      className={`sidebar ${isOpen ? "mobile-open" : ""}`}
+      id="primary-sidebar"
+      aria-label="Main navigation"
+    >
 
       {/* LOGO */}
-
       <div className="sidebar-logo">
-
-        <div className="logo-box">
-          N
-        </div>
+        <img
+          className="sidebar-logo-image"
+          src="/nitt-logo.jpg"
+          alt="NIT Tiruchirappalli crest"
+        />
 
         <div>
-          <h2>NITT</h2>
-          <span>Event Management</span>
+          <h2>NIT Trichy</h2>
+          <span>National Institute of Technology, Tiruchirappalli</span>
+          <span>Department of Computer Applications</span>
         </div>
-
       </div>
 
 
       {/* MENU */}
-
       <nav className="sidebar-menu">
 
-
         {/* DASHBOARD */}
-
-        <Link
+        <NavLink
           to={
             userType === "admin"
               ? "/admin/dashboard"
               : "/user/dashboard"
           }
-          className="sidebar-link"
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "active" : ""}`
+          }
+          onClick={onNavigate}
         >
           <span>🏠</span>
           Dashboard
-        </Link>
+        </NavLink>
 
 
         {/* EVENTS */}
-
-        <Link
+        <NavLink
           to={
             userType === "admin"
               ? "/admin/events"
               : "/user/events"
           }
-          className="sidebar-link"
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "active" : ""}`
+          }
+          onClick={onNavigate}
         >
           <span>📅</span>
           Events
-        </Link>
+        </NavLink>
 
 
-        {/* USER */}
+        {/* ================================
+            USER MENU
+        ================================= */}
 
         {userType === "user" && (
+          <>
 
-          <Link
-            to="/user/my-events"
-            className="sidebar-link"
-          >
-            <span>📝</span>
-            My Events
-          </Link>
+            {/* MY EVENTS */}
+            <NavLink
+              to="/user/my-events"
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? "active" : ""}`
+              }
+              onClick={onNavigate}
+            >
+              <span>📝</span>
+              My Events
+            </NavLink>
 
+
+            {/* ACCOMMODATION */}
+            <NavLink
+              to="/user/accommodation"
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? "active" : ""}`
+              }
+              onClick={onNavigate}
+            >
+              <span>🏨</span>
+              Accommodation & Hospitality
+            </NavLink>
+
+
+            {/* CERTIFICATE GENERATION */}
+            <NavLink
+              to="/user/certificates"
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? "active" : ""}`
+              }
+              onClick={onNavigate}
+            >
+              <span>🏆</span>
+              Certificate Generation
+            </NavLink>
+
+
+            {/* ADVERTISEMENT & PUBLICITY */}
+            <NavLink
+              to="/user/advertisement"
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? "active" : ""}`
+              }
+              onClick={onNavigate}
+            >
+              <span>📢</span>
+              Advertisement & Publicity
+            </NavLink>
+
+          </>
         )}
 
 
-        {/* ADMIN */}
+        {/* ================================
+            ADMIN MENU
+        ================================= */}
 
         {userType === "admin" && (
-
-          <Link
-            to="/admin/my-events"
-            className="sidebar-link"
+        <>
+          {/* USER EVALUATION */}
+          <NavLink
+            to="/admin/evaluation"
+            className={({ isActive }) =>
+              `sidebar-link ${isActive ? "active" : ""}`
+            }
+            onClick={onNavigate}
           >
-            <span>⚙️</span>
-            Manage Events
-          </Link>
+            <span>⭐</span>
+            User Evaluation
+          </NavLink>
 
-        )}
+          {/* EVENT REPORT */}
+          <NavLink
+            to="/admin/event-report"
+            className={({ isActive }) =>
+              `sidebar-link ${isActive ? "active" : ""}`
+            }
+            onClick={onNavigate}
+          >
+            <span>📊</span>
+            Event Reports
+          </NavLink>
+        </>
+      )}
 
 
         {/* PROFILE */}
-
-        <a
-          href="#"
-          className="sidebar-link"
+        <NavLink
+          to={userType === "admin" ? "/admin/profile" : "/user/profile"}
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "active" : ""}`
+          }
+          onClick={onNavigate}
         >
           <span>👤</span>
           Profile
-        </a>
+        </NavLink>
 
       </nav>
 
 
       {/* LOGOUT */}
-
       <div className="sidebar-bottom">
 
         <Link
           to="/login"
           className="sidebar-link logout"
+          onClick={onNavigate}
         >
           <span>🚪</span>
           Logout
@@ -116,11 +185,8 @@ function Sidebar({ userType = "user" }) {
 
       </div>
 
-
     </aside>
-
   );
 }
-
 
 export default Sidebar;
